@@ -28,6 +28,12 @@ export const sellerDict: Record<string, Entry> = {
   'shome.returnToSeller':    { uz: 'Boshqa sotuvchiga qaytarish', en: 'Return to another seller', ru: 'Вернуть другому продавцу', ko: '다른 판매자에게 반품' },
   'shome.expiryDate':        { uz: 'Yaroqlilik muddati', en: 'Expiry date', ru: 'Срок годности', ko: '유통기한' },
 
+  // Balance / My account — monthly statement
+  'sbal.monthlyReport': { uz: 'Oylik hisobot', en: 'Monthly report', ru: 'Ежемесячный отчёт', ko: '월별 보고서' },
+  'sbal.soldCount':     { uz: '{n} ta sotildi', en: '{n} sold', ru: 'продано {n}', ko: '{n}개 판매' },
+  'sbal.sales':         { uz: 'Savdo', en: 'Sales', ru: 'Продажи', ko: '매출' },
+  'sbal.yourEarnings':  { uz: 'Daromadingiz', en: 'Your earnings', ru: 'Ваш доход', ko: '내 수익' },
+
   // Telegram post sheet
   'shome.postToChannel':     { uz: '📢 Kanalga yuborish', en: '📢 Post to channel', ru: '📢 Отправить в канал', ko: '📢 채널에 게시' },
   'shome.willBeSentToChannel': { uz: '@cameliakorea kanaliga yuboriladi', en: 'Will be sent to the @cameliakorea channel', ru: 'Будет отправлено в канал @cameliakorea', ko: '@cameliakorea 채널로 전송됩니다' },

@@ -6,9 +6,15 @@ import SellerNav from '@/components/SellerNav'
 import { useState } from 'react'
 import { History, Sparkles, CircleDollarSign, CheckCircle2, ChevronDown, CalendarDays } from 'lucide-react'
 import { useS } from '@/consts/strings'
+import { useT, useLocale } from '@/i18n'
 
 const UZ_MONTH = ['', 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
-const monthLabel = (ym: string) => { const [y, m] = ym.split('-'); return `${UZ_MONTH[parseInt(m, 10)] ?? m} ${y}` }
+// Locale-aware month label: Uzbek keeps the custom names; en/ru/ko use the platform's month names.
+const monthLabel = (ym: string, locale: string) => {
+  const [y, m] = ym.split('-'); const n = parseInt(m, 10)
+  if (locale === 'uz') return `${UZ_MONTH[n] ?? m} ${y}`
+  return `${new Date(Number(y), n - 1, 1).toLocaleString(locale, { month: 'long' })} ${y}`
+}
 
 // From v_my_summary (a definer view — correct for sellers, unlike v_seller_balances
 // which returns 0 because of the products-RLS cascade).
@@ -25,6 +31,8 @@ type Props = { summary: Summary | null; payments: Payment[]; monthly: Monthly[];
 
 export default function MyBalance({ summary, payments, monthly, commissionPct }: Props) {
   const S = useS()
+  const t = useT()
+  const locale = useLocale()
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   if (!summary) return (
@@ -127,22 +135,22 @@ export default function MyBalance({ summary, payments, monthly, commissionPct }:
           <div className="bg-surface rounded-2xl shadow-card overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-rose" />
-              <h3 className="font-display font-bold text-ink text-base">Oylik hisobot</h3>
+              <h3 className="font-display font-bold text-ink text-base">{t('sbal.monthlyReport')}</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {[...monthly].reverse().map(m => (
                 <div key={m.month} className="px-5 py-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-display font-bold text-ink">{monthLabel(m.month)}</p>
-                    <span className="text-xs text-muted">{m.units_sold} ta sotildi</span>
+                    <p className="font-display font-bold text-ink">{monthLabel(m.month, locale)}</p>
+                    <span className="text-xs text-muted">{t('sbal.soldCount', { n: m.units_sold })}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-cream rounded-xl px-3 py-2">
-                      <p className="text-[11px] text-muted">Savdo</p>
+                      <p className="text-[11px] text-muted">{t('sbal.sales')}</p>
                       <p className="font-display font-bold text-ink text-sm">{formatUZS(m.revenue)}</p>
                     </div>
                     <div className="bg-gradient-to-br from-success/10 to-mint/10 rounded-xl px-3 py-2">
-                      <p className="text-[11px] text-muted">Daromadingiz</p>
+                      <p className="text-[11px] text-muted">{t('sbal.yourEarnings')}</p>
                       <p className="font-display font-bold text-success text-sm">{formatUZS(m.your_profit)}</p>
                     </div>
                   </div>
