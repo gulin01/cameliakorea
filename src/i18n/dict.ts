@@ -99,6 +99,8 @@ const baseDict: Record<string, Entry> = {
   'adash.totalSales':  { uz: 'Umumiy savdo', en: 'Total sales', ru: 'Общие продажи', ko: '총 매출' },
   'adash.unitsSold':   { uz: 'Sotilgan (dona)', en: 'Units sold', ru: 'Продано (шт)', ko: '판매 수량' },
   'adash.topProducts': { uz: "Ko'p sotilgan mahsulotlar", en: 'Best-selling products', ru: 'Самые продаваемые', ko: '베스트셀러' },
+  'adash.soldN':       { uz: '{n} ta sotildi', en: '{n} sold', ru: 'продано {n}', ko: '{n}개 판매' },
+  'adash.noSales':     { uz: "Hali sotuv yo'q", en: 'No sales yet', ru: 'Продаж пока нет', ko: '아직 판매 없음' },
   'adash.productReport':{ uz: 'Mahsulot hisoboti', en: 'Product report', ru: 'Отчёт по товарам', ko: '상품 보고서' },
   'adash.colProduct':  { uz: 'Mahsulot', en: 'Product', ru: 'Товар', ko: '상품' },
   'adash.colTotal':    { uz: 'Jami', en: 'Total', ru: 'Всего', ko: '전체' },

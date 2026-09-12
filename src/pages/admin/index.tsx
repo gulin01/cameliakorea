@@ -4,13 +4,13 @@ import { requireRole } from '@/lib/guards'
 import { formatUZS } from '@/lib/format'
 import { useS, type SShape } from '@/consts/strings'
 import { useT, type TFunc } from '@/i18n'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { formatDate } from '@/lib/format'
 import AdminNav from '@/components/AdminNav'
 import Link from 'next/link'
 import { TrendingUp, DollarSign, AlertCircle, ShoppingCart, Wallet, Package, Sparkles, Gift } from 'lucide-react'
 
-type ProductStat = { name: string; units_sold: number; revenue: number }
+// Top sellers for the dashboard leaderboard — image + units sold + revenue.
+type TopProduct = { product_id: string; name: string; units_sold: number; revenue: number; image_url: string | null }
 type RecentSale = { seller_name: string; product_name: string; qty: number; revenue: number; sold_at: string }
 type KPIs = { totalRevenue: number; myProfit: number; totalOutstanding: number; unitsSold: number }
 // Business progress (discounts applied to worth/expected)
@@ -25,7 +25,7 @@ type Biz = {
 // Folded in from the old /admin/stats page so each number lives in exactly one place.
 type SellerStat = { seller_id: string; seller_name: string; owed_from_sales: number; received: number; balance: number }
 type ProductRow  = { product_id: string; name: string; total_qty: number; units_sold: number; units_remaining: number; revenue: number }
-type Props = { kpis: KPIs; biz: Biz; productStats: ProductStat[]; recentSales: RecentSale[]; sellerStats: SellerStat[]; productRows: ProductRow[] }
+type Props = { kpis: KPIs; biz: Biz; topProducts: TopProduct[]; recentSales: RecentSale[]; sellerStats: SellerStat[]; productRows: ProductRow[] }
 
 const CHART_COLORS = ['#F4628E','#B9A7F0','#6FD8C0','#7CC4F2','#FFB088','#F4628E','#B9A7F0','#6FD8C0']
 
@@ -49,13 +49,15 @@ function Metric({ icon: Icon, label, value, sub, accent }: { icon: any; label: s
   )
 }
 
-export default function AdminDashboard({ kpis, biz, productStats, recentSales, sellerStats, productRows }: Props) {
+export default function AdminDashboard({ kpis, biz, topProducts, recentSales, sellerStats, productRows }: Props) {
   const t = useT()
   const S = useS()
   // Honest denominator: what's been sold + what's still on the shelf. Comparing
   // cumulative revenue against *current* stock value would mix two different bases.
   const potential = biz.soldRevenue + biz.worth
   const pct = potential > 0 ? (biz.soldRevenue / potential) * 100 : 0
+  // Leaderboard bars are scaled against the top seller (topProducts is sorted desc).
+  const topSold = topProducts[0]?.units_sold ?? 0
   return (
     <div className="min-h-screen bg-cream">
       <AdminNav />
@@ -107,22 +109,36 @@ export default function AdminDashboard({ kpis, biz, productStats, recentSales, s
           })}
         </div>
 
-        {/* Bar chart */}
+        {/* Best-selling products — ranked leaderboard with photo, units sold and revenue */}
         <div className="bg-surface rounded-2xl shadow-card p-6">
           <h2 className="font-display font-bold text-ink text-lg mb-5">{t('adash.topProducts')}</h2>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={productStats} margin={{ left: 0, right: 0 }}>
-              <XAxis dataKey="name" tick={{ fill: '#8A7F8C', fontSize: 11, fontFamily: 'var(--font-inter)' }} />
-              <YAxis tick={{ fill: '#8A7F8C', fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: 'none', borderRadius: '12px', boxShadow: '0 8px 30px rgba(244,98,142,0.12)', fontFamily: 'var(--font-inter)' }}
-                formatter={(v: number) => [v, t('adash.sold')]}
-              />
-              <Bar dataKey="units_sold" radius={[8, 8, 0, 0]}>
-                {productStats.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {topProducts.length === 0 ? (
+            <p className="text-muted text-sm py-6 text-center">{t('adash.noSales')}</p>
+          ) : (
+            <div className="space-y-3">
+              {topProducts.map((p, i) => {
+                const pct = topSold > 0 ? Math.max(6, (p.units_sold / topSold) * 100) : 0
+                return (
+                  <div key={p.product_id} className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full grid place-items-center text-xs font-bold flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-rose to-peach text-white' : 'bg-cream text-muted'}`}>{i + 1}</span>
+                    {p.image_url
+                      ? <img src={p.image_url} alt={p.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0 shadow-sm" />
+                      : <div className="w-12 h-12 rounded-xl grid place-items-center flex-shrink-0 text-white font-display font-bold text-lg" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}>{p.name.charAt(0).toUpperCase()}</div>}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-ink text-sm truncate">{p.name}</p>
+                      <div className="mt-1.5 h-2 rounded-full bg-cream overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-rose to-peach transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 w-28">
+                      <p className="font-display font-bold text-ink">{t('adash.soldN', { n: p.units_sold })}</p>
+                      <p className="text-xs text-muted">{formatUZS(p.revenue)}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Per-product report (was /admin/stats) */}
@@ -210,13 +226,13 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const [{ data: recent }, { data: productStats }, { data: balances }, { data: allSales }, { data: products }, { data: adjustments }] = await Promise.all([
     // Recent feed (15 newest) — display only
     supabase.from('v_sales_enriched').select('revenue, sold_at, seller_name, product_name, qty').order('sold_at', { ascending: false }).limit(15),
-    // Chart: top 8 products
-    supabase.from('v_product_stats').select('name, units_sold, revenue').order('units_sold', { ascending: false }).limit(8),
+    // Leaderboard: top 6 best-selling products (by units sold)
+    supabase.from('v_product_stats').select('product_id, name, units_sold, revenue').order('units_sold', { ascending: false }).limit(6),
     supabase.from('v_seller_balances').select('balance'),
     // ALL sales — for the TRUE totals (not just the last 20)
     supabase.from('v_sales_enriched').select('revenue, my_profit, qty'),
-    // Inventory value + capital
-    supabase.from('products').select('id, cost, total_qty, retail_price, discount_price'),
+    // Inventory value + capital (+ cover image for the leaderboard)
+    supabase.from('products').select('id, cost, total_qty, retail_price, discount_price, image_url'),
     // Giveaways (+ damaged/lost) for the "Sovg'a" metric
     supabase.from('stock_adjustments').select('reason, qty, product_id'),
   ])
@@ -240,7 +256,19 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   const prods = products ?? []
   const costById: Record<string, number> = {}
-  for (const p of prods) costById[p.id] = p.cost ?? 0
+  const imageById: Record<string, string | null> = {}
+  for (const p of prods) { costById[p.id] = p.cost ?? 0; imageById[p.id] = (p as any).image_url ?? null }
+
+  // Best-selling leaderboard: real top sellers, with their cover photo attached.
+  const topProducts: TopProduct[] = (productStats ?? [])
+    .filter((p: any) => (p.units_sold ?? 0) > 0)
+    .map((p: any) => ({
+      product_id: p.product_id,
+      name:       p.name,
+      units_sold: p.units_sold ?? 0,
+      revenue:    p.revenue ?? 0,
+      image_url:  imageById[p.product_id] ?? null,
+    }))
 
   // Value CURRENT stock, not everything ever received (ux-walkthrough §7 #14).
   // `total_qty × cost` counted units sold months ago at today's cost, so both numbers
@@ -269,5 +297,5 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     giveawayValue:  giveaways.reduce((s, a) => s + (costById[a.product_id] ?? 0) * (a.qty ?? 0), 0),
   }
 
-  return { props: { kpis, biz, productStats: productStats ?? [], recentSales: recent ?? [], sellerStats: sellerStats ?? [], productRows: productRowsReconciled } }
+  return { props: { kpis, biz, topProducts, recentSales: recent ?? [], sellerStats: sellerStats ?? [], productRows: productRowsReconciled } }
 }
