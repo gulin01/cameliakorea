@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPublicClient } from '@/lib/supabase/api'
 import { TOPICS } from '@/consts/community'
 import { formatDate } from '@/lib/format'
@@ -75,6 +75,29 @@ function RelativeDate({ value, labelKey }: { value: string; labelKey: string }) 
   return <span title={formatDate(value, true)}>{t(labelKey)}: {rel ?? formatDate(value)}</span>
 }
 
+// Lightweight, safe rich text for answers: **bold**, [label](https://…) and bare URLs.
+// Builds React nodes (never dangerouslySetInnerHTML), so answer text can't inject markup.
+// Newlines are preserved by the container's `whitespace-pre-line`.
+const LINK_CLS = 'text-rose font-medium underline underline-offset-2 hover:text-roseDark break-words'
+function renderRich(text: string): ReactNode[] {
+  const out: ReactNode[] = []
+  const re = /\*\*(.+?)\*\*|\[([^\]]+?)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s)]+)/g
+  let last = 0, i = 0, m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index))
+    if (m[1] !== undefined) {
+      out.push(<strong key={i} className="font-semibold text-ink">{m[1]}</strong>)
+    } else if (m[2] !== undefined) {
+      out.push(<a key={i} href={m[3]} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{m[2]}</a>)
+    } else {
+      out.push(<a key={i} href={m[4]} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{m[4]}</a>)
+    }
+    last = re.lastIndex; i++
+  }
+  if (last < text.length) out.push(text.slice(last))
+  return out
+}
+
 // One answered question. Long answers are clamped to a few lines with a "See more"
 // toggle so the list stays scannable; each card owns its own expand state.
 function QACard({ qa, t }: { qa: QA; t: TFunc }) {
@@ -96,7 +119,7 @@ function QACard({ qa, t }: { qa: QA; t: TFunc }) {
       <p className="font-semibold text-ink">{qa.question}</p>
       <div className="mt-3 pl-3 border-l-2 border-rose/40">
         <p className="text-xs font-semibold text-rose mb-0.5">{t('comm.answerLabel')}</p>
-        <p className={`text-ink/90 whitespace-pre-line leading-relaxed ${long && !expanded ? 'line-clamp-4' : ''}`}>{qa.answer}</p>
+        <p className={`text-ink/90 whitespace-pre-line leading-relaxed ${long && !expanded ? 'line-clamp-4' : ''}`}>{renderRich(qa.answer)}</p>
         {long && (
           <button onClick={() => setExpanded(e => !e)}
             className="mt-1.5 text-xs font-semibold text-rose hover:text-roseDark transition">
